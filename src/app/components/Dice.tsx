@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface DiceProps {
   onRollComplete?: (value: number) => void;
@@ -35,6 +35,26 @@ export function Dice({ onRollComplete, disabled = false, debugValue = null }: Di
       }
     }, 100);
   };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) return;
+      if (event.code !== 'Space') return;
+
+      const target = event.target as HTMLElement | null;
+      const isEditable = target?.isContentEditable;
+      const tagName = target?.tagName;
+      const isFormField = tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT' || tagName === 'BUTTON';
+
+      if (isEditable || isFormField) return;
+
+      event.preventDefault();
+      rollDice();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [disabled, isRolling, onRollComplete]);
 
   const renderDots = () => {
     const dots = [];

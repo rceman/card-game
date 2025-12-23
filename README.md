@@ -23,6 +23,5 @@ Optional local check of the production build:
 
 ```bash
 npm run build:github
-npm run preview
+npm run preview:github
 ```
-  

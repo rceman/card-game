@@ -1,5 +1,6 @@
 import { Sword } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
 
 interface CardData {
   id: number;
@@ -15,17 +16,38 @@ interface GameCardProps {
   isPlayer: boolean;
   isActive?: boolean;
   damageAmount?: number;
+  diceRoll?: number | null;
   isDefeated?: boolean;
   debugMode?: boolean;
   debugAnimate?: boolean;
   debugFadeOut?: boolean;
 }
 
-export function GameCard({ card, isPlayer, isActive = false, damageAmount, isDefeated = false, debugMode = false, debugAnimate = true, debugFadeOut = true }: GameCardProps) {
+type ShakeConfig = { distance: number; iterations: number; durationMs: number };
+
+const SHAKE_BY_ROLL: Record<number, ShakeConfig> = {
+  1: { distance: 30, iterations: 1.5, durationMs: 400 },
+  2: { distance: 25, iterations: 1.5, durationMs: 500 },
+  3: { distance: 20, iterations: 1, durationMs: 600 },
+  4: { distance: 15, iterations: 1, durationMs: 600 },
+  5: { distance: 10, iterations: 1, durationMs: 500 },
+  6: { distance: 5, iterations: 1, durationMs: 400 },
+};
+
+export function getShakeConfig(diceRoll: unknown): ShakeConfig {
+  const n = typeof diceRoll === 'number' ? diceRoll : Number(diceRoll);
+  if (!isFinite(n)) return { distance: 0, iterations: 0, durationMs: 0 };
+
+  const roll = Math.min(6, Math.max(1, Math.trunc(n)));
+  return SHAKE_BY_ROLL[roll];
+}
+
+export function GameCard({ card, isPlayer, isActive = false, damageAmount, diceRoll = null, isDefeated = false, debugMode = false, debugAnimate = true, debugFadeOut = true }: GameCardProps) {
   const hpPercentage = (card.currentHp / card.maxHp) * 100;
   const [showDamage, setShowDamage] = useState(false);
   const [shake, setShake] = useState(false);
   const [redBlink, setRedBlink] = useState(false);
+  const [showDefeatText, setShowDefeatText] = useState(false);
 
   // Calculate font size based on damage amount (5 steps, 5% reduction each)
   const calculateFontSize = () => {
@@ -44,35 +66,61 @@ export function GameCard({ card, isPlayer, isActive = false, damageAmount, isDef
 
   const fontSize = calculateFontSize();
 
+  const shakeConfig = getShakeConfig(diceRoll);
+  const shakeTotalDurationMs = shakeConfig.durationMs * shakeConfig.iterations;
+  const shouldShake = shakeConfig.iterations > 0 && shakeConfig.distance > 0;
+
   useEffect(() => {
     if (damageAmount && damageAmount > 0) {
-      setShowDamage(true);
-      
+      const timeouts: number[] = [];
+
       // Only animate and fade if not in debug mode or if animate is enabled
       if (!debugMode || debugAnimate) {
-        setShake(true);
+        setShake(shouldShake);
         setRedBlink(true);
 
+        timeouts.push(window.setTimeout(() => setShowDamage(true), 100));
+
         // Remove shake after animation
-        setTimeout(() => setShake(false), 500);
+        if (shouldShake) {
+          timeouts.push(window.setTimeout(() => setShake(false), shakeTotalDurationMs));
+        }
         
         // Remove red blink
-        setTimeout(() => setRedBlink(false), 300);
+        timeouts.push(window.setTimeout(() => setRedBlink(false), 300));
 
         // Remove damage number after fade (only if not in debug mode)
         if (!debugMode || debugFadeOut) {
-          setTimeout(() => setShowDamage(false), 2000);
+          timeouts.push(window.setTimeout(() => setShowDamage(false), 2000));
         }
+      } else {
+        setShowDamage(true);
       }
+
+      return () => {
+        timeouts.forEach(timeoutId => window.clearTimeout(timeoutId));
+      };
     } else {
       setShowDamage(false);
     }
-  }, [damageAmount, debugMode, debugAnimate, debugFadeOut]);
+  }, [damageAmount, debugMode, debugAnimate, debugFadeOut, shouldShake, shakeTotalDurationMs]);
+
+  useEffect(() => {
+    if (!isDefeated) {
+      setShowDefeatText(false);
+      return;
+    }
+
+    const delayMs = !debugFadeOut || !damageAmount || damageAmount <= 0 ? 0 : 1250;
+    const timeoutId = window.setTimeout(() => setShowDefeatText(true), delayMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isDefeated, damageAmount, debugFadeOut]);
 
   return (
     <div className="relative w-72 h-72">
       {/* DEFEAT Text - Outside card frame so it stays red */}
-      {isDefeated && (
+      {showDefeatText && (
         <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
           <div
             style={{
@@ -133,7 +181,12 @@ export function GameCard({ card, isPlayer, isActive = false, damageAmount, isDef
           ? 'border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.8)]' 
           : 'border-gray-500'
       } shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${shake ? 'animate-shake' : ''} ${redBlink ? 'animate-red-blink' : ''} ${isDefeated ? 'grayscale' : ''}`}
-        style={{ opacity: isActive ? 1 : 0.95 }}
+        style={{
+          opacity: isActive ? 1 : 0.95,
+          '--shake-distance': `${shakeConfig.distance}px`,
+          '--shake-duration': `${shakeConfig.durationMs}ms`,
+          '--shake-iterations': `${shakeConfig.iterations}`
+        } as CSSProperties}
       >
         
         {/* Card Image */}

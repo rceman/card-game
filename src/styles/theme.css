@@ -181,8 +181,16 @@
 
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-10px); }
-    75% { transform: translateX(10px); }
+    12% { transform: translateX(calc(var(--shake-distance, 10px) * -1)); }
+    24% { transform: translateX(var(--shake-distance, 10px)); }
+    36% { transform: translateX(calc(var(--shake-distance, 10px) * -0.8)); }
+    48% { transform: translateX(calc(var(--shake-distance, 10px) * 0.7)); }
+    60% { transform: translateX(calc(var(--shake-distance, 10px) * -0.55)); }
+    72% { transform: translateX(calc(var(--shake-distance, 10px) * 0.4)); }
+    82% { transform: translateX(calc(var(--shake-distance, 10px) * -0.3)); }
+    88% { transform: translateX(calc(var(--shake-distance, 10px) * 0.22)); }
+    92% { transform: translateX(calc(var(--shake-distance, 10px) * -0.16)); }
+    96% { transform: translateX(calc(var(--shake-distance, 10px) * 0.1)); }
   }
 
   @keyframes red-blink {
@@ -202,7 +210,8 @@
   }
 
   .animate-shake {
-    animation: shake 0.5s ease-in-out;
+    animation: shake var(--shake-duration, 0.5s) cubic-bezier(0.2, 0.6, 0.2, 1) var(--shake-iterations, 1);
+    animation-fill-mode: both;
   }
 
   .animate-red-blink {

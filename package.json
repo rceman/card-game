@@ -6,7 +6,9 @@
   "scripts": {
     "build": "vite build",
     "build:github": "vite build --mode github",
-    "dev": "vite"
+    "dev": "vite",
+    "preview": "vite preview",
+    "preview:github": "vite preview --base /card-game/"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

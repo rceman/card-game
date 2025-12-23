@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GameCard } from './components/GameCard';
 import { Dice } from './components/Dice';
 import { Settings } from 'lucide-react';
@@ -15,6 +15,7 @@ interface Card {
 }
 
 export default function App() {
+  const isDev = import.meta.env.DEV;
   const [playerCard, setPlayerCard] = useState<Card>({
     id: 1,
     name: 'Fang',
@@ -51,16 +52,25 @@ export default function App() {
   const [debugFadeOut, setDebugFadeOut] = useState(true);
   const [debugHealP2, setDebugHealP2] = useState(false);
   const [debugDiceRoll, setDebugDiceRoll] = useState<number | null>(null);
+  const [lastDiceRoll, setLastDiceRoll] = useState<number | null>(null);
+  const globalDiceRoll = debugDiceRoll ?? lastDiceRoll;
+
+  useEffect(() => {
+    if (debugDiceRoll !== null) {
+      setLastDiceRoll(debugDiceRoll);
+    }
+  }, [debugDiceRoll]);
 
   const handleDiceRoll = (diceValue: number) => {
     setIsWaitingForNextTurn(true);
     setTurnProgress(0);
     
     // Use debug dice value if set, otherwise use rolled value
-    const actualDiceValue = debugDiceRoll || diceValue;
+    const actualDiceValue = debugDiceRoll ?? diceValue;
+    setLastDiceRoll(actualDiceValue);
     
     // Animate the progress bar
-    const duration = 2500; // milliseconds
+    const duration = 1500; // milliseconds
     const interval = 50; // update every 50ms
     const steps = duration / interval;
     let currentStep = 0;
@@ -116,7 +126,7 @@ export default function App() {
       setPlayerDamage(0);
       setEnemyDamage(0);
       setIsWaitingForNextTurn(false);
-    }, 2500);
+    }, 1500);
   };
 
   const handlePlayAgain = () => {
@@ -149,84 +159,94 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 relative overflow-hidden flex items-center justify-center">
-      {/* Debug Button */}
-      <button 
-        onClick={() => setDebugMode(!debugMode)}
-        className={`absolute top-4 right-4 p-3 rounded-full transition-all z-50 ${
-          debugMode 
-            ? 'bg-blue-600 hover:bg-blue-700 shadow-[0_0_20px_rgba(59,130,246,0.8)]' 
-            : 'bg-gray-700 hover:bg-gray-600'
-        }`}
-      >
-        <Settings className="w-6 h-6 text-white" />
-      </button>
+      {isDev && (
+        <>
+          {/* Debug Button */}
+          <button 
+            onClick={() => setDebugMode(!debugMode)}
+            className={`absolute top-4 left-4 p-3 rounded-full transition-all z-50 ${
+              debugMode 
+                ? 'bg-blue-600 hover:bg-blue-700 shadow-[0_0_20px_rgba(59,130,246,0.8)]' 
+                : 'bg-gray-700 hover:bg-gray-600'
+            }`}
+          >
+            <Settings className="w-6 h-6 text-white" />
+          </button>
 
-      {/* Debug Menu */}
-      {debugMode && (
-        <div className="absolute top-20 right-4 bg-slate-800 rounded-lg p-4 shadow-2xl border-2 border-slate-600 text-white z-50 min-w-[240px]">
-          <div className="space-y-3">
-            {/* P2 Buttons */}
-            <div className="space-y-2">
-              <button
-                onClick={() => setDebugDamageP2(!debugDamageP2)}
-                className={`w-full px-3 py-2 rounded text-sm transition-all ${
-                  debugDamageP2 ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-600 hover:bg-gray-700'
-                }`}
-              >
-                Damage P2
-              </button>
-              
-              <button
-                onClick={() => setDebugDefeatP2(!debugDefeatP2)}
-                className={`w-full px-3 py-2 rounded text-sm transition-all ${
-                  debugDefeatP2 ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-600 hover:bg-gray-700'
-                }`}
-              >
-                Defeat P2
-              </button>
-              
-              <button
-                onClick={() => setDebugHealP2(!debugHealP2)}
-                className={`w-full px-3 py-2 rounded text-sm transition-all ${
-                  debugHealP2 ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-700'
-                }`}
-              >
-                Heal P2
-              </button>
-            </div>
+          {/* Debug Menu */}
+          {debugMode && (
+            <div className="absolute top-20 left-4 bg-slate-800 rounded-lg p-4 shadow-2xl border-2 border-slate-600 text-white z-50 min-w-[240px]">
+              <div className="space-y-3">
+                {/* P2 Buttons */}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setDebugDamageP2(!debugDamageP2)}
+                    className={`w-full px-3 py-2 rounded text-sm transition-all ${
+                      debugDamageP2 ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-600 hover:bg-gray-700'
+                    }`}
+                  >
+                    Damage P2
+                  </button>
+                  
+                  <button
+                    onClick={() => setDebugDefeatP2(!debugDefeatP2)}
+                    className={`w-full px-3 py-2 rounded text-sm transition-all ${
+                      debugDefeatP2 ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-600 hover:bg-gray-700'
+                    }`}
+                  >
+                    Defeat P2
+                  </button>
+                  
+                  <button
+                    onClick={() => setDebugHealP2(!debugHealP2)}
+                    className={`w-full px-3 py-2 rounded text-sm transition-all ${
+                      debugHealP2 ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-700'
+                    }`}
+                  >
+                    Heal P2
+                  </button>
+                </div>
 
-            {/* Checkboxes */}
-            <div className="space-y-2 pt-2 border-t border-slate-600">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="animate"
-                  checked={debugAnimate}
-                  onChange={(e) => setDebugAnimate(e.target.checked)}
-                  className="w-4 h-4 cursor-pointer"
-                />
-                <label htmlFor="animate" className="text-sm cursor-pointer">
-                  Animate
-                </label>
-              </div>
+                {/* Checkboxes */}
+                <div className="space-y-2 pt-2 border-t border-slate-600">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="animate"
+                      checked={debugAnimate}
+                      onChange={(e) => setDebugAnimate(e.target.checked)}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                    <label htmlFor="animate" className="text-sm cursor-pointer">
+                      Animate
+                    </label>
+                  </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="fadeOut"
-                  checked={debugFadeOut}
-                  onChange={(e) => setDebugFadeOut(e.target.checked)}
-                  className="w-4 h-4 cursor-pointer"
-                />
-                <label htmlFor="fadeOut" className="text-sm cursor-pointer">
-                  Fade Out
-                </label>
-              </div>
-            </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="fadeOut"
+                      checked={debugFadeOut}
+                      onChange={(e) => setDebugFadeOut(e.target.checked)}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                    <label htmlFor="fadeOut" className="text-sm cursor-pointer">
+                      Fade Out
+                    </label>
+                  </div>
+                </div>
 
-            {/* Dice Roll Section */}
+                {/* Dice Roll Section */}
             <div className="pt-2 border-t border-slate-600">
-              <div className="text-xs mb-2 text-gray-400">Dice Roll</div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs text-gray-400">Dice Roll</div>
+                <button
+                  onClick={() => setDebugDiceRoll(null)}
+                  className="text-[11px] px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-200 transition-all"
+                >
+                  Reset
+                </button>
+              </div>
               <div className="flex gap-1">
                 {[1, 2, 3, 4, 5, 6].map(num => (
                   <label key={num} className="flex items-center cursor-pointer">
@@ -248,8 +268,10 @@ export default function App() {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Player Card - Center Top */}
@@ -260,6 +282,7 @@ export default function App() {
           isActive={isPlayerTurn && !gameOver}
           damageAmount={playerDamage}
           isDefeated={gameOver && winner === 'enemy'}
+          diceRoll={globalDiceRoll}
           debugMode={debugMode}
           debugAnimate={debugAnimate}
           debugFadeOut={debugFadeOut}
@@ -272,8 +295,9 @@ export default function App() {
           card={enemyCards[0]} 
           isPlayer={false}
           isActive={!isPlayerTurn && !gameOver}
-          damageAmount={debugDamageP2 && debugDiceRoll ? Math.floor(enemyCards[0].attack / debugDiceRoll) : enemyDamage}
+          damageAmount={debugDamageP2 && globalDiceRoll ? Math.floor(enemyCards[0].attack / globalDiceRoll) : enemyDamage}
           isDefeated={debugDefeatP2 || (gameOver && winner === 'player')}
+          diceRoll={globalDiceRoll}
           debugMode={debugMode}
           debugAnimate={debugAnimate}
           debugFadeOut={debugFadeOut}
