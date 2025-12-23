@@ -127,11 +127,14 @@ export function GameCard({ card, isPlayer, isActive = false, damageAmount, isDef
       )}
       
       {/* Card Frame */}
-      <div className={`w-full h-full bg-gradient-to-b from-amber-600 to-amber-800 rounded-2xl border-4 ${
+      <div
+        className={`w-full h-full bg-gradient-to-b from-amber-600 to-amber-800 rounded-2xl border-4 ${
         isActive 
           ? 'border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.8)]' 
           : 'border-gray-500'
-      } shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${shake ? 'animate-shake' : ''} ${redBlink ? 'animate-red-blink' : ''} ${isDefeated ? 'grayscale' : ''}`}>
+      } shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${shake ? 'animate-shake' : ''} ${redBlink ? 'animate-red-blink' : ''} ${isDefeated ? 'grayscale' : ''}`}
+        style={{ opacity: isActive ? 1 : 0.95 }}
+      >
         
         {/* Card Image */}
         <div className="h-52 overflow-hidden relative flex-shrink-0">
@@ -143,7 +146,7 @@ export function GameCard({ card, isPlayer, isActive = false, damageAmount, isDef
         </div>
 
         {/* Card Info Section */}
-        <div className="flex-1 p-4 bg-gradient-to-b from-slate-800 to-slate-900 flex items-center">
+        <div className="flex-1 p-4 py-3 pb-6 bg-gradient-to-b from-slate-800 to-slate-900 flex items-center">
           <div className="flex justify-between items-center text-white w-full text-lg">
             <div className="uppercase font-bold">{card.name}</div>
             <div className="flex items-center gap-2">
@@ -155,7 +158,7 @@ export function GameCard({ card, isPlayer, isActive = false, damageAmount, isDef
       </div>
 
       {/* HP Bar */}
-      <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 w-60 h-8 bg-slate-700 rounded-full border-4 overflow-hidden shadow-lg transition-all duration-300 ${
+      <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 w-60 h-10 bg-slate-700 rounded-full border-4 overflow-hidden shadow-lg transition-all duration-300 ${
         isActive 
           ? 'border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.6)]' 
           : 'border-gray-500'

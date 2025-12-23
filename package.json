@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "build:github": "vite build --mode github",
     "dev": "vite"
   },
   "dependencies": {
