@@ -1,23 +1,37 @@
 import { useState } from 'react';
 
-export function Dice() {
+interface DiceProps {
+  onRollComplete?: (value: number) => void;
+  disabled?: boolean;
+  debugValue?: number | null;
+}
+
+export function Dice({ onRollComplete, disabled = false, debugValue = null }: DiceProps) {
   const [value, setValue] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
 
+  // Use debugValue if available, otherwise use regular value
+  const displayValue = debugValue || value;
+
   const rollDice = () => {
-    if (isRolling) return;
+    if (isRolling || disabled) return;
     
     setIsRolling(true);
     let rolls = 0;
     const maxRolls = 10;
+    let finalValue = 1;
     
     const interval = setInterval(() => {
-      setValue(Math.floor(Math.random() * 6) + 1);
+      finalValue = Math.floor(Math.random() * 6) + 1;
+      setValue(finalValue);
       rolls++;
       
       if (rolls >= maxRolls) {
         clearInterval(interval);
         setIsRolling(false);
+        if (onRollComplete) {
+          onRollComplete(finalValue);
+        }
       }
     }, 100);
   };
@@ -33,7 +47,7 @@ export function Dice() {
       6: ['top-left', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-right'],
     };
 
-    const dotPositions = positions[value];
+    const dotPositions = positions[displayValue];
     
     dotPositions.forEach((pos, index) => {
       const positionClass = {
@@ -61,9 +75,11 @@ export function Dice() {
     <div className="flex flex-col items-center gap-4">
       <button
         onClick={rollDice}
-        disabled={isRolling}
-        className={`w-24 h-24 bg-white rounded-2xl shadow-2xl relative border-4 border-slate-200 cursor-pointer hover:scale-105 transition-transform ${
+        disabled={isRolling || disabled}
+        className={`w-24 h-24 bg-white rounded-2xl shadow-2xl relative border-4 border-slate-200 transition-transform ${
           isRolling ? 'animate-bounce' : ''
+        } ${
+          disabled || isRolling ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-105'
         }`}
       >
         {renderDots()}

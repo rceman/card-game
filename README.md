@@ -1,7 +1,7 @@
 
-  # Card Game Layout Design
+  # Card Game Layout Design(1)
 
-  This is a code bundle for Card Game Layout Design. The original project is available at https://www.figma.com/design/YlB4TE2LAHJVt79VKrXyhQ/Card-Game-Layout-Design.
+  This is a code bundle for Card Game Layout Design(1). The original project is available at https://www.figma.com/design/LfIYpmzIr7OpViazEn3Z43/Card-Game-Layout-Design-1-.
 
   ## Running the code
 
