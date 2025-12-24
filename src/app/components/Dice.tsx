@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
+import { PLAYER_ACCENTS } from '../ui/playerAccents';
 
 interface DiceProps {
   onRollComplete?: (value: number) => void;
   disabled?: boolean;
   debugValue?: number | null;
+  playerSide?: 'p1' | 'p2';
 }
 
-export function Dice({ onRollComplete, disabled = false, debugValue = null }: DiceProps) {
+export function Dice({ onRollComplete, disabled = false, debugValue = null, playerSide = 'p1' }: DiceProps) {
   const [value, setValue] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
+  const accent = playerSide === 'p1' ? PLAYER_ACCENTS.p1 : PLAYER_ACCENTS.p2;
 
   // Use debugValue if available, otherwise use regular value
   const displayValue = debugValue || value;
@@ -20,9 +23,18 @@ export function Dice({ onRollComplete, disabled = false, debugValue = null }: Di
     let rolls = 0;
     const maxRolls = 10;
     let finalValue = 1;
+
+    const getRandomRoll = () => {
+      if (typeof crypto !== 'undefined' && 'getRandomValues' in crypto) {
+        const array = new Uint32Array(1);
+        crypto.getRandomValues(array);
+        return (array[0] % 6) + 1;
+      }
+      return Math.floor(Math.random() * 6) + 1;
+    };
     
     const interval = setInterval(() => {
-      finalValue = Math.floor(Math.random() * 6) + 1;
+      finalValue = getRandomRoll();
       setValue(finalValue);
       rolls++;
       
@@ -96,7 +108,7 @@ export function Dice({ onRollComplete, disabled = false, debugValue = null }: Di
       <button
         onClick={rollDice}
         disabled={isRolling || disabled}
-        className={`w-24 h-24 bg-white rounded-2xl shadow-2xl relative border-4 border-slate-200 transition-transform ${
+        className={`w-24 h-24 bg-white rounded-2xl shadow-2xl relative border-4 ${accent.border} transition-transform ${
           isRolling ? 'animate-bounce' : ''
         } ${
           disabled || isRolling ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-105'

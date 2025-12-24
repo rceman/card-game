@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GameCard } from './components/GameCard';
 import { Dice } from './components/Dice';
+import { CardSelection } from './components/CardSelection';
 import { Settings } from 'lucide-react';
-import cardImage1 from 'figma:asset/f5c14083b56fa4afc934de3d3b3ac3d062845790.png';
-import cardImage2 from 'figma:asset/82cc283a0251028e37c4dd30a6134aadcf6643a0.png';
+import { CARD_DATABASE, getCardByParam, getCardImageUrl } from './data/cards';
+import type { CardDefinition } from './data/cards';
 
 interface Card {
   id: number;
@@ -12,29 +13,28 @@ interface Card {
   maxHp: number;
   currentHp: number;
   attack: number;
+  attacksPerTurn: number;
 }
 
 export default function App() {
   const isDev = import.meta.env.DEV;
-  const [playerCard, setPlayerCard] = useState<Card>({
-    id: 1,
-    name: 'Fang',
-    image: cardImage1,
-    maxHp: 4300,
-    currentHp: 4300,
-    attack: 1360
+  const fallbackCard = CARD_DATABASE[0] as CardDefinition;
+  const defaultPlayer = CARD_DATABASE.find(card => card.name === 'Fang') ?? fallbackCard;
+  const defaultEnemy = CARD_DATABASE.find(card => card.name === 'Pearl') ?? CARD_DATABASE[1] ?? defaultPlayer;
+
+  const createCardState = (card: CardDefinition): Card => ({
+    id: card.id,
+    name: card.name,
+    image: getCardImageUrl(card.image),
+    maxHp: card.health,
+    currentHp: card.health,
+    attack: card.attack,
+    attacksPerTurn: card.attacksPerTurn ?? 1
   });
 
-  const [enemyCards, setEnemyCards] = useState<Card[]>([
-    {
-      id: 2,
-      name: 'Pearl',
-      image: cardImage2,
-      maxHp: 3900,
-      currentHp: 3900,
-      attack: 1560
-    }
-  ]);
+  const [playerCard, setPlayerCard] = useState<Card>(createCardState(defaultPlayer));
+
+  const [enemyCards, setEnemyCards] = useState<Card[]>([createCardState(defaultEnemy)]);
 
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [playerDamage, setPlayerDamage] = useState(0);
@@ -54,6 +54,48 @@ export default function App() {
   const [debugDiceRoll, setDebugDiceRoll] = useState<number | null>(null);
   const [lastDiceRoll, setLastDiceRoll] = useState<number | null>(null);
   const globalDiceRoll = debugDiceRoll ?? lastDiceRoll;
+  const gameOverRef = useRef(gameOver);
+  const [selectionStep, setSelectionStep] = useState<'p1' | 'p2' | 'done'>('p1');
+  const [selectedP1Id, setSelectedP1Id] = useState<number | null>(null);
+  const [selectedP2Id, setSelectedP2Id] = useState<number | null>(null);
+
+  const startGameWithCards = (player: CardDefinition, enemy: CardDefinition) => {
+    setPlayerCard(createCardState(player));
+    setEnemyCards([createCardState(enemy)]);
+    setIsPlayerTurn(true);
+    setPlayerDamage(0);
+    setEnemyDamage(0);
+    setGameOver(false);
+    setWinner(null);
+    setIsWaitingForNextTurn(false);
+    setTurnProgress(0);
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const p1Param = params.get('p1');
+    const p2Param = params.get('p2');
+    const p1Card = getCardByParam(p1Param);
+    const p2Card = getCardByParam(p2Param);
+
+    if (p1Card && p2Card) {
+      setSelectionStep('done');
+      setSelectedP1Id(p1Card.id);
+      setSelectedP2Id(p2Card.id);
+      startGameWithCards(p1Card, p2Card);
+      return;
+    }
+
+    if (p1Card) {
+      setSelectedP1Id(p1Card.id);
+      setPlayerCard(createCardState(p1Card));
+    }
+
+    if (p2Card) {
+      setSelectedP2Id(p2Card.id);
+      setEnemyCards([createCardState(p2Card)]);
+    }
+  }, []);
 
   useEffect(() => {
     if (debugDiceRoll !== null) {
@@ -61,7 +103,22 @@ export default function App() {
     }
   }, [debugDiceRoll]);
 
+  useEffect(() => {
+    gameOverRef.current = gameOver;
+  }, [gameOver]);
+
+  const triggerEnemyDamage = (damage: number) => {
+    setEnemyDamage(0);
+    window.requestAnimationFrame(() => setEnemyDamage(damage));
+  };
+
+  const triggerPlayerDamage = (damage: number) => {
+    setPlayerDamage(0);
+    window.requestAnimationFrame(() => setPlayerDamage(damage));
+  };
+
   const handleDiceRoll = (diceValue: number) => {
+    if (gameOver || playerCard.currentHp <= 0 || enemyCards[0].currentHp <= 0) return;
     setIsWaitingForNextTurn(true);
     setTurnProgress(0);
     
@@ -84,44 +141,55 @@ export default function App() {
       }
     }, interval);
     
+    const hitIntervalMs = 200;
+
     if (isPlayerTurn) {
-      // Player attacks enemy
       const damage = Math.floor(playerCard.attack / actualDiceValue);
-      setEnemyDamage(damage);
-      
-      setTimeout(() => {
-        setEnemyCards(prev => prev.map(card => {
-          const newHp = Math.max(0, card.currentHp - damage);
-          return { ...card, currentHp: newHp };
-        }));
-        
-        // Check if enemy is defeated
-        const newEnemyHp = Math.max(0, enemyCards[0].currentHp - damage);
-        if (newEnemyHp <= 0) {
-          setGameOver(true);
-          setWinner('player');
-        }
-      }, 500);
+      const hits = playerCard.attacksPerTurn;
+
+      for (let hitIndex = 0; hitIndex < hits; hitIndex += 1) {
+        setTimeout(() => {
+          if (gameOverRef.current) return;
+          triggerEnemyDamage(damage);
+
+          setEnemyCards(prev => prev.map(card => {
+            const newHp = Math.max(0, card.currentHp - damage);
+            if (newHp <= 0 && !gameOverRef.current) {
+              gameOverRef.current = true;
+              setGameOver(true);
+              setWinner('player');
+            }
+            return { ...card, currentHp: newHp };
+          }));
+        }, hitIndex * hitIntervalMs);
+      }
     } else {
-      // Enemy attacks player
       const damage = Math.floor(enemyCards[0].attack / actualDiceValue);
-      setPlayerDamage(damage);
-      
-      setTimeout(() => {
-        setPlayerCard(prev => {
-          const newHp = Math.max(0, prev.currentHp - damage);
-          if (newHp <= 0) {
-            setGameOver(true);
-            setWinner('enemy');
-          }
-          return { ...prev, currentHp: newHp };
-        });
-      }, 500);
+      const hits = enemyCards[0].attacksPerTurn;
+
+      for (let hitIndex = 0; hitIndex < hits; hitIndex += 1) {
+        setTimeout(() => {
+          if (gameOverRef.current) return;
+          triggerPlayerDamage(damage);
+
+          setPlayerCard(prev => {
+            const newHp = Math.max(0, prev.currentHp - damage);
+            if (newHp <= 0 && !gameOverRef.current) {
+              gameOverRef.current = true;
+              setGameOver(true);
+              setWinner('enemy');
+            }
+            return { ...prev, currentHp: newHp };
+          });
+        }, hitIndex * hitIntervalMs);
+      }
     }
     
     // Switch turns after animations complete
     setTimeout(() => {
-      setIsPlayerTurn(!isPlayerTurn);
+      if (!gameOverRef.current) {
+        setIsPlayerTurn(!isPlayerTurn);
+      }
       // Reset damage amounts after turn switch
       setPlayerDamage(0);
       setEnemyDamage(0);
@@ -130,24 +198,9 @@ export default function App() {
   };
 
   const handlePlayAgain = () => {
-    setPlayerCard({
-      id: 1,
-      name: 'Fang',
-      image: cardImage1,
-      maxHp: 4300,
-      currentHp: 4300,
-      attack: 1360
-    });
-    
-    setEnemyCards([{
-      id: 2,
-      name: 'Pearl',
-      image: cardImage2,
-      maxHp: 3900,
-      currentHp: 3900,
-      attack: 1560
-    }]);
-    
+    setSelectionStep('p1');
+    setSelectedP1Id(null);
+    setSelectedP2Id(null);
     setIsPlayerTurn(true);
     setPlayerDamage(0);
     setEnemyDamage(0);
@@ -156,6 +209,41 @@ export default function App() {
     setIsWaitingForNextTurn(false);
     setTurnProgress(0);
   };
+
+  const handleConfirmSelection = () => {
+    if (selectionStep === 'p1') {
+      const chosen = CARD_DATABASE.find(card => card.id === selectedP1Id) ?? null;
+      if (!chosen) return;
+      setPlayerCard(createCardState(chosen));
+      setSelectionStep('p2');
+      return;
+    }
+
+    if (selectionStep === 'p2') {
+      const chosenPlayer = CARD_DATABASE.find(card => card.id === selectedP1Id) ?? defaultPlayer;
+      const chosenEnemy = CARD_DATABASE.find(card => card.id === selectedP2Id) ?? null;
+      if (!chosenEnemy) return;
+      startGameWithCards(chosenPlayer, chosenEnemy);
+      setSelectionStep('done');
+    }
+  };
+
+  if (selectionStep !== 'done') {
+    const isPickingP1 = selectionStep === 'p1';
+    const activeSelectionId = isPickingP1 ? selectedP1Id : selectedP2Id;
+    const setActiveSelectionId = isPickingP1 ? setSelectedP1Id : setSelectedP2Id;
+
+    return (
+      <CardSelection
+        step={selectionStep}
+        cards={CARD_DATABASE}
+        selectedId={activeSelectionId}
+        onSelect={setActiveSelectionId}
+        onConfirm={handleConfirmSelection}
+        onBack={() => setSelectionStep('p1')}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 relative overflow-hidden flex items-center justify-center">
@@ -307,7 +395,12 @@ export default function App() {
       {/* Dice / Play Again Button - Center (slightly below center) */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ marginTop: '8px' }}>
         {!gameOver ? (
-          <Dice onRollComplete={handleDiceRoll} disabled={isWaitingForNextTurn} debugValue={debugDiceRoll} />
+          <Dice
+            onRollComplete={handleDiceRoll}
+            disabled={isWaitingForNextTurn || gameOver || playerCard.currentHp <= 0 || enemyCards[0].currentHp <= 0}
+            debugValue={debugDiceRoll}
+            playerSide={isPlayerTurn ? 'p1' : 'p2'}
+          />
         ) : (
           <button
             onClick={handlePlayAgain}

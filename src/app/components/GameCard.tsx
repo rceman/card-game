@@ -1,6 +1,7 @@
 import { Sword } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { PLAYER_ACCENTS } from '../ui/playerAccents';
 
 interface CardData {
   id: number;
@@ -42,18 +43,26 @@ export function getShakeConfig(diceRoll: unknown): ShakeConfig {
   return SHAKE_BY_ROLL[roll];
 }
 
+const DAMAGE_FADE_MS = 2000;
+const DAMAGE_STAGGER_MS = 120;
+const DAMAGE_STAGGER_MAX_MS = 360;
+
 export function GameCard({ card, isPlayer, isActive = false, damageAmount, diceRoll = null, isDefeated = false, debugMode = false, debugAnimate = true, debugFadeOut = true }: GameCardProps) {
   const hpPercentage = (card.currentHp / card.maxHp) * 100;
-  const [showDamage, setShowDamage] = useState(false);
+  const accent = isPlayer ? PLAYER_ACCENTS.p1 : PLAYER_ACCENTS.p2;
+  const activeBorder = `${accent.border} ${accent.glow}`;
   const [shake, setShake] = useState(false);
   const [redBlink, setRedBlink] = useState(false);
   const [showDefeatText, setShowDefeatText] = useState(false);
+  const [damageInstances, setDamageInstances] = useState<Array<{ id: number; value: number; delayMs: number; fontSize: number; expiresAt: number }>>([]);
+  const damageIdRef = useRef(0);
+  const lastDamageExpireAtRef = useRef(0);
 
   // Calculate font size based on damage amount (5 steps, 5% reduction each)
-  const calculateFontSize = () => {
-    if (!damageAmount) return 96;
+  const calculateFontSize = (amount: number) => {
+    if (!amount) return 96;
     
-    const damagePercent = (damageAmount / card.attack) * 100;
+    const damagePercent = (amount / card.attack) * 100;
     const baseSize = 96;
     
     if (damagePercent >= 90) return baseSize; // 96px
@@ -63,8 +72,6 @@ export function GameCard({ card, isPlayer, isActive = false, damageAmount, diceR
     if (damagePercent >= 10) return baseSize * 0.80; // 76.8px
     return baseSize * 0.75; // 72px for very low damage
   };
-
-  const fontSize = calculateFontSize();
 
   const shakeConfig = getShakeConfig(diceRoll);
   const shakeTotalDurationMs = shakeConfig.durationMs * shakeConfig.iterations;
@@ -79,7 +86,33 @@ export function GameCard({ card, isPlayer, isActive = false, damageAmount, diceR
         setShake(shouldShake);
         setRedBlink(true);
 
-        timeouts.push(window.setTimeout(() => setShowDamage(true), 100));
+        if (debugFadeOut) {
+          const damageId = damageIdRef.current + 1;
+          damageIdRef.current = damageId;
+          const fontSize = calculateFontSize(damageAmount);
+          let delayMs = 0;
+          let expiresAt = 0;
+          setDamageInstances(prev => {
+            delayMs = Math.min(prev.length * DAMAGE_STAGGER_MS, DAMAGE_STAGGER_MAX_MS);
+            expiresAt = Date.now() + DAMAGE_FADE_MS + delayMs;
+            return [...prev, { id: damageId, value: damageAmount, delayMs, fontSize, expiresAt }];
+          });
+          lastDamageExpireAtRef.current = Math.max(lastDamageExpireAtRef.current, expiresAt);
+          timeouts.push(
+            window.setTimeout(() => {
+              setDamageInstances(prev => prev.filter(instance => instance.id !== damageId));
+            }, DAMAGE_FADE_MS + delayMs)
+          );
+        } else {
+          setDamageInstances([{
+            id: damageIdRef.current + 1,
+            value: damageAmount,
+            delayMs: 0,
+            fontSize: calculateFontSize(damageAmount),
+            expiresAt: Date.now()
+          }]);
+          damageIdRef.current += 1;
+        }
 
         // Remove shake after animation
         if (shouldShake) {
@@ -88,20 +121,22 @@ export function GameCard({ card, isPlayer, isActive = false, damageAmount, diceR
         
         // Remove red blink
         timeouts.push(window.setTimeout(() => setRedBlink(false), 300));
-
-        // Remove damage number after fade (only if not in debug mode)
-        if (!debugMode || debugFadeOut) {
-          timeouts.push(window.setTimeout(() => setShowDamage(false), 2000));
-        }
       } else {
-        setShowDamage(true);
+        setDamageInstances([{
+          id: damageIdRef.current + 1,
+          value: damageAmount,
+          delayMs: 0,
+          fontSize: calculateFontSize(damageAmount),
+          expiresAt: Date.now()
+        }]);
+        damageIdRef.current += 1;
       }
 
       return () => {
         timeouts.forEach(timeoutId => window.clearTimeout(timeoutId));
       };
-    } else {
-      setShowDamage(false);
+    } else if (!debugFadeOut) {
+      setDamageInstances([]);
     }
   }, [damageAmount, debugMode, debugAnimate, debugFadeOut, shouldShake, shakeTotalDurationMs]);
 
@@ -111,14 +146,14 @@ export function GameCard({ card, isPlayer, isActive = false, damageAmount, diceR
       return;
     }
 
-    const delayMs = !debugFadeOut || !damageAmount || damageAmount <= 0 ? 0 : 1250;
+    const delayMs = !debugFadeOut ? 0 : 1500;
     const timeoutId = window.setTimeout(() => setShowDefeatText(true), delayMs);
 
     return () => window.clearTimeout(timeoutId);
-  }, [isDefeated, damageAmount, debugFadeOut]);
+  }, [isDefeated, damageAmount, debugFadeOut, damageInstances]);
 
   return (
-    <div className="relative w-72 h-72">
+    <div className={`relative w-72 h-72 transform transition-transform ${isActive ? 'scale-[1.05]' : 'scale-100'}`}>
       {/* DEFEAT Text - Outside card frame so it stays red */}
       {showDefeatText && (
         <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
@@ -146,40 +181,51 @@ export function GameCard({ card, isPlayer, isActive = false, damageAmount, diceR
       )}
       
       {/* Damage Number - Centered on Card */}
-      {showDamage && damageAmount && damageAmount > 0 && (
-        <div 
-          className={`absolute inset-0 flex items-center justify-center z-50 pointer-events-none ${debugFadeOut ? 'animate-fade-out' : ''}`}
-          style={!debugFadeOut ? { opacity: 1 } : undefined}
+      {damageInstances.map((instance, index) => (
+        <div
+          key={instance.id}
+          className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none"
+          style={{
+            transform: `translateY(${(index % 2 === 0 ? -20 : 20)}px)`,
+            opacity: !debugFadeOut ? 1 : undefined
+          }}
         >
           <div
+            className={debugFadeOut ? 'animate-fade-out' : ''}
             style={{
-              fontSize: `${fontSize}px`,
-              fontWeight: 'bold',
-              color: '#ff2222',
-              textShadow: `
-                -3px -3px 0 #000,
-                3px -3px 0 #000,
-                -3px 3px 0 #000,
-                3px 3px 0 #000,
-                -3px 0 0 #000,
-                3px 0 0 #000,
-                0 -3px 0 #000,
-                0 3px 0 #000,
-                0 0 10px rgba(255, 0, 0, 0.8)
-              `
+              animationDelay: debugFadeOut ? `${instance.delayMs}ms` : undefined
             }}
           >
-            -{damageAmount}
+            <div
+              style={{
+              fontSize: `${instance.fontSize}px`,
+                fontWeight: 'bold',
+                color: '#ff2222',
+                textShadow: `
+                  -3px -3px 0 #000,
+                  3px -3px 0 #000,
+                  -3px 3px 0 #000,
+                  3px 3px 0 #000,
+                  -3px 0 0 #000,
+                  3px 0 0 #000,
+                  0 -3px 0 #000,
+                  0 3px 0 #000,
+                  0 0 10px rgba(255, 0, 0, 0.8)
+                `
+              }}
+            >
+              -{instance.value}
+            </div>
           </div>
         </div>
-      )}
+      ))}
       
       {/* Card Frame */}
       <div
-        className={`w-full h-full bg-gradient-to-b from-amber-600 to-amber-800 rounded-2xl border-4 ${
+        className={`w-full h-full bg-gradient-to-b from-amber-700 to-amber-800 rounded-2xl border-4 ${
         isActive 
-          ? 'border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.8)]' 
-          : 'border-gray-500'
+          ? activeBorder
+          : 'border-gray-600'
       } shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${shake ? 'animate-shake' : ''} ${redBlink ? 'animate-red-blink' : ''} ${isDefeated ? 'grayscale' : ''}`}
         style={{
           opacity: isActive ? 1 : 0.95,
@@ -213,8 +259,8 @@ export function GameCard({ card, isPlayer, isActive = false, damageAmount, diceR
       {/* HP Bar */}
       <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 w-60 h-10 bg-slate-700 rounded-full border-4 overflow-hidden shadow-lg transition-all duration-300 ${
         isActive 
-          ? 'border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.6)]' 
-          : 'border-gray-500'
+          ? activeBorder
+          : 'border-gray-600'
       }`}>
         <div 
           className="h-full bg-gradient-to-r from-red-600 to-red-500 transition-all duration-300"

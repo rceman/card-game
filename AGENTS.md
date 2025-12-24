@@ -13,3 +13,6 @@ When a task requires lengthy searching, capture the relevant findings in `AGENTS
 ## Shake Animation
 - Location: `src/styles/theme.css` (`@keyframes shake`, `.animate-shake`) and `src/app/components/GameCard.tsx` (damage-based shake config).
 - Behavior: horizontal swing intensity and repetitions scale with damage; lower damage reduces swing and repeats.
+
+## UI Priority
+- Mobile-first UI; optimize layouts for phone screens (iphone 12 pro 390 x 844) before desktop.
