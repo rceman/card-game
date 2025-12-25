@@ -1,3 +1,6 @@
+export type BodyClass = 'tank' | 'normal' | 'glass';
+export type WeaponType = 'shotgun' | 'sniper' | 'burst' | 'rapid' | 'melee' | 'multi_hit' | 'spray';
+
 export type CardDefinition = {
   id: number;
   name: string;
@@ -5,6 +8,10 @@ export type CardDefinition = {
   health: number;
   attack: number;
   attacksPerTurn?: number;
+
+  // NEW:
+  bodyClass: BodyClass;
+  weaponType: WeaponType;
 };
 
 const cardImages = import.meta.glob('../../assets/cards/*.png', {
@@ -38,42 +45,54 @@ export const CARD_DATABASE: CardDefinition[] = [
     name: 'Pearl',
     image: 'bs_pearl.png',
     health: 3900,
-    attack: 1560
+    attack: 1560,
+    bodyClass: 'normal',
+    weaponType: 'burst'
   },
   {
     id: 41,
     name: 'Gale',
     image: 'bs_gale.png',
     health: 3800,
-    attack: 1680
+    attack: 1680,
+    bodyClass: 'normal',
+    weaponType: 'burst'
   },
   {
     id: 44,
     name: 'Jessie',
     image: 'bs_jessie.png',
     health: 3000,
-    attack: 1060
+    attack: 1060,
+    bodyClass: 'normal',
+    weaponType: 'burst'
   },
   {
     id: 60,
     name: 'Nani',
     image: 'bs_nani.png',
     health: 2400,
-    attack: 2220
+    attack: 2220,
+    bodyClass: 'glass',
+    weaponType: 'sniper'
   },
   {
     id: 66,
     name: 'Darryl',
     image: 'bs_darryl.png',
     health: 5300,
-    attack: 2400
+    attack: 2400,
+    bodyClass: 'tank',
+    weaponType: 'shotgun'
   },
   {
     id: 67,
     name: 'Draco',
     image: 'bs_draco.png',
     health: 5500,
-    attack: 600
+    attack: 600,
+    bodyClass: 'tank',
+    weaponType: 'melee'
   },
   {
     id: 71,
@@ -81,35 +100,45 @@ export const CARD_DATABASE: CardDefinition[] = [
     image: 'bs_larry_lawrie.png',
     health: 3000,
     attack: 700,
-    attacksPerTurn: 2
+    attacksPerTurn: 2,
+    bodyClass: 'normal',
+    weaponType: 'multi_hit'
   },
   {
     id: 86,
     name: 'Max',
     image: 'bs_max.png',
     health: 3300,
-    attack: 1280
+    attack: 1280,
+    bodyClass: 'normal',
+    weaponType: 'rapid'
   },
   {
     id: 87,
     name: 'Pam',
     image: 'bs_pam.png',
     health: 4800,
-    attack: 2340
+    attack: 2340,
+    bodyClass: 'tank',
+    weaponType: 'spray'
   },
   {
     id: 94,
     name: 'Fang',
     image: 'bs_fang.png',
     health: 4300,
-    attack: 1360
+    attack: 1360,
+    bodyClass: 'normal',
+    weaponType: 'melee'
   },
   {
     id: 99,
     name: 'Mico',
     image: 'bs_mico.png',
     health: 3000,
-    attack: 1090
+    attack: 1090,
+    bodyClass: 'normal',
+    weaponType: 'melee'
   }
 ];
 
