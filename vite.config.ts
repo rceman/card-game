@@ -24,6 +24,9 @@ export default defineConfig(() => {
           'icons/icon-512.png',
           'icons/maskable-192.png',
           'icons/maskable-512.png',
+          'icons/favicon-16.png',
+          'icons/favicon-32.png',
+          'icons/favicon-64.png',
         ],
         manifest: {
           name: 'Brawl Dice',
