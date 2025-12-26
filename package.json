@@ -4,12 +4,12 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "predev": "node scripts/copy-pwa-icons.mjs",
-    "prebuild": "node scripts/copy-pwa-icons.mjs",
-    "build": "vite build",
-    "build:github": "vite build --mode github",
-    "dev": "vite",
+    "copy:pwa-icons": "node scripts/copy-pwa-icons.mjs",
+    "build": "npm run copy:pwa-icons && vite build",
+    "build:github": "npm run copy:pwa-icons && vite build --mode github",
+    "dev": "npm run copy:pwa-icons && vite",
     "preview": "vite preview",
+    "verify:pwa-assets": "node scripts/verify-pwa-assets.mjs",
     "preview:github": "vite preview --base /card-game/"
   },
   "dependencies": {

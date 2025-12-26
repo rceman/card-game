@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -30,10 +32,14 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build:github
+      - name: List built icons
+        run: ls -la dist/icons || true
+      - name: Verify PWA assets
+        run: npm run verify:pwa-assets
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: ./dist
 
   deploy:
     runs-on: ubuntu-latest
