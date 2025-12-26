@@ -21,13 +21,13 @@ export function CardSelection({ step, cards, selectedId, onSelect, onConfirm, on
   const accentButton = `${accent.button} ${accent.buttonHover} shadow-xl`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 relative overflow-hidden flex items-center justify-center">
+    <div className="appSafeArea min-h-[100dvh] bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 relative overflow-hidden flex items-center justify-center">
       <div className="w-full max-w-5xl px-5 py-5">
         <div className="text-center text-white text-xl font-bold mb-5">
           {isPickingP1 ? 'Player 1 Picking Card...' : 'Player 2 Picking Card...'}
         </div>
 
-        <div className="max-h-[80vh] overflow-y-auto rounded-md">
+        <div className="max-h-[80dvh] overflow-y-auto rounded-md">
           <div className="grid grid-cols-2 gap-2">
             {cards.map(card => {
               const isSelected = card.id === selectedId;

@@ -44,9 +44,7 @@ export default function App() {
   const [debugMode, setDebugMode] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState<'player' | 'enemy' | null>(null);
-  const [debugDamageP1, setDebugDamageP1] = useState(false);
   const [debugDamageP2, setDebugDamageP2] = useState(false);
-  const [debugDefeatP1, setDebugDefeatP1] = useState(false);
   const [debugDefeatP2, setDebugDefeatP2] = useState(false);
   const [debugAnimate, setDebugAnimate] = useState(true);
   const [debugFadeOut, setDebugFadeOut] = useState(true);
@@ -246,7 +244,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 relative overflow-hidden flex items-center justify-center">
+    <div className="appSafeArea min-h-[100dvh] bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 relative overflow-hidden flex items-center justify-center">
       {isDev && (
         <>
           {/* Debug Button */}
